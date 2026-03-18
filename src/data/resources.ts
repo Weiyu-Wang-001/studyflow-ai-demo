@@ -1,0 +1,133 @@
+import { Resource } from '../types';
+
+export const initialResources: Resource[] = [
+  {
+    id: '1',
+    title: 'OpenFlow Lecture 4',
+    type: 'PDF',
+    course: 'CMPE 210',
+    description: 'Key concepts of OpenFlow architecture, controllers, flow rules, and packet handling.',
+    tags: ['SDN', 'OpenFlow', 'Networking'],
+    updatedAt: '2 hours ago',
+    favorite: true,
+    status: 'Reviewing',
+    progress: 82,
+    tone: 'blue',
+    content:
+      'OpenFlow separates the control plane from the data plane, allowing a centralized controller to manage switch behavior and install forwarding rules dynamically.',
+  },
+  {
+    id: '2',
+    title: 'Week 6 SDN Architecture Slides',
+    type: 'Slides',
+    course: 'CMPE 210',
+    description: 'Visual overview of SDN layers, APIs, controller responsibilities, and switch interactions.',
+    tags: ['Architecture', 'Controller'],
+    updatedAt: 'Yesterday',
+    favorite: false,
+    status: 'Ready',
+    progress: 65,
+    tone: 'violet',
+    content:
+      'The slide deck explains the application, control, and infrastructure layers and compares northbound and southbound interfaces in a modern SDN stack.',
+  },
+  {
+    id: '3',
+    title: 'Campus Marketplace Wireframe',
+    type: 'Image',
+    course: 'CMPE 272',
+    description: 'Low-fidelity UI exploration for homepage navigation, category chips, and product discovery.',
+    tags: ['UI', 'Prototype', 'Wireframe'],
+    updatedAt: '3 days ago',
+    favorite: true,
+    status: 'Pinned',
+    progress: 41,
+    tone: 'amber',
+    content:
+      'The wireframe focuses on visual hierarchy, scan-friendly cards, and filtering patterns that reduce interaction friction for first-time users.',
+  },
+  {
+    id: '4',
+    title: 'Project GitHub Repository',
+    type: 'Link',
+    course: 'Hackathon',
+    description: 'Source code, setup notes, team task split, and deployment checklist for the final demo.',
+    tags: ['GitHub', 'Code', 'Team'],
+    updatedAt: '4 days ago',
+    favorite: false,
+    status: 'Shared',
+    progress: 90,
+    tone: 'emerald',
+    content:
+      'The repo documents the React frontend structure, potential Express endpoints, deployment steps, and a lightweight workflow for collaborative development.',
+  },
+  {
+    id: '5',
+    title: 'Hash Functions Summary',
+    type: 'PDF',
+    course: 'CMPE 209',
+    description: 'Compact review notes for hash properties, attacks, and exam preparation.',
+    tags: ['Security', 'Hash', 'Exam'],
+    updatedAt: '5 days ago',
+    favorite: false,
+    status: 'Reviewing',
+    progress: 58,
+    tone: 'rose',
+    content:
+      'A secure hash should be preimage resistant, second-preimage resistant, and collision resistant. MD5 and SHA-1 are no longer suitable for many security-sensitive use cases.',
+  },
+  {
+    id: '6',
+    title: 'Final Demo Flow',
+    type: 'Slides',
+    course: 'Hackathon',
+    description: 'Structured presentation notes for why, what, how, and UX considerations.',
+    tags: ['Demo', 'Presentation', 'UX'],
+    updatedAt: '1 week ago',
+    favorite: true,
+    status: 'Ready',
+    progress: 96,
+    tone: 'cyan',
+    content:
+      'This material frames the product as a UI-first web application with unified search, a clean information architecture, and AI as a meaningful enhancement rather than the main focus.',
+  },
+  {
+    id: '7',
+    title: 'Study Plan Notes',
+    type: 'Notes',
+    course: 'Workspace',
+    description: 'Personal study checklist with high-priority topics and quick review reminders.',
+    tags: ['Notes', 'Planning', 'Checklist'],
+    updatedAt: 'Today',
+    favorite: false,
+    status: 'In Progress',
+    progress: 27,
+    tone: 'slate',
+    content:
+      'Focus on OpenFlow, hash functions, web UI examples, and final presentation timing. Review slides with active recall and short summary prompts.',
+  },
+  {
+    id: '8',
+    title: 'System Design Demo Video',
+    type: 'Video',
+    course: 'Hackathon',
+    description: 'Recorded concept for walking through dashboard, search, drawer, and AI interactions.',
+    tags: ['Video', 'Workflow', 'Demo'],
+    updatedAt: '2 days ago',
+    favorite: false,
+    status: 'Draft',
+    progress: 34,
+    tone: 'indigo',
+    content:
+      'The walkthrough demonstrates how users move from dashboard insights to resource discovery, then into detail review and AI-assisted summarization.',
+  },
+];
+
+export const typeOptions = ['All', 'PDF', 'Slides', 'Image', 'Link', 'Notes', 'Video'];
+export const categoryOptions = ['All Areas', 'Hackathon', 'CMPE 210', 'CMPE 209', 'CMPE 272', 'Workspace'];
+export const quickPrompts = [
+  'Summarize the selected resource',
+  'What makes this UI usable?',
+  'Find the best demo materials',
+  'Explain the value of unified search',
+];

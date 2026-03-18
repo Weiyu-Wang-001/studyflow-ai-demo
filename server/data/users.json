@@ -1,0 +1,30 @@
+[
+  {
+    "id": "a3d898e3-3157-4c0c-ba41-6284b70916e4",
+    "username": "testuser",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "nickname": "Test User",
+    "createdAt": "2026-03-18T10:38:06.344Z"
+  },
+  {
+    "id": "7b685747-179f-4c91-abb1-491540bef5b3",
+    "username": "user",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "nickname": "aaa",
+    "createdAt": "2026-03-18T10:38:06.499Z"
+  },
+  {
+    "id": "3ad6eced-4992-444b-8192-d4078420f180",
+    "username": "demouser",
+    "password": "d2b000ce0875cad8615dd8cf34f788635c959a0ce2b8a977e22caab745380b06",
+    "nickname": "Demo Student",
+    "createdAt": "2026-03-18T10:39:39.021Z"
+  },
+  {
+    "id": "1becf4fb-54db-4f3e-8e85-e43f909f59e1",
+    "username": "pw123",
+    "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "nickname": "aaaa",
+    "createdAt": "2026-03-18T11:49:48.372Z"
+  }
+]

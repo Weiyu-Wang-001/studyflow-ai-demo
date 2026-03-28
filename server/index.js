@@ -1,10 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import { aiChat, aiSummarize } from './routes/ai.js';
-import { register, login } from './routes/auth.js';
+import { initDB } from './db.js';
 
 const app = express();
 const PORT = 3008;
+
+await initDB();
+
+const { aiChat, aiSummarize } = await import('./routes/ai.js');
+const { register, login } = await import('./routes/auth.js');
 
 app.use(cors());
 app.use(express.json());

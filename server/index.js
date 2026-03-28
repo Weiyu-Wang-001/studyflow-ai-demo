@@ -17,6 +17,10 @@ app.post('/api/auth/login', login);
 app.post('/api/ai/chat', aiChat);
 app.post('/api/ai/summarize', aiSummarize);
 
+// Resource routes
+app.post('/api/upload', uploadResource);
+app.get('/api/resources', getResources);
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

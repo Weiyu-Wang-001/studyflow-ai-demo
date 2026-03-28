@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { aiChat, aiSummarize } from './routes/ai.js';
 import { register, login } from './routes/auth.js';
+import { uploadResource, getResources } from './routes/upload.js';
 
 const app = express();
 const PORT = 3008;

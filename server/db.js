@@ -41,6 +41,25 @@ export async function initDB() {
     )`
   );
 
+  db.run(
+    `CREATE TABLE IF NOT EXISTS resources (
+      id TEXT PRIMARY KEY,
+      ownerId TEXT,
+      title TEXT,
+      type TEXT,
+      course TEXT,
+      description TEXT,
+      tags TEXT,
+      updatedAt TEXT,
+      favorite INTEGER DEFAULT 0,
+      status TEXT,
+      progress INTEGER DEFAULT 0,
+      tone TEXT,
+      content TEXT,
+      filePath TEXT
+    )`
+  );
+
   saveDB();
 }
 
@@ -65,6 +84,57 @@ export function insertUser({ id, username, password, nickname, createdAt }) {
   try {
     stmt.run({ ':id': id, ':username': username, ':password': password, ':nickname': nickname, ':createdAt': createdAt });
     saveDB();
+  } finally {
+    stmt.free();
+  }
+}
+
+export function insertResource(resource) {
+  const stmt = db.prepare(
+    `INSERT INTO resources (id, ownerId, title, type, course, description, tags, updatedAt, favorite, status, progress, tone, content, filePath)
+     VALUES (:id, :ownerId, :title, :type, :course, :description, :tags, :updatedAt, :favorite, :status, :progress, :tone, :content, :filePath)`
+  );
+  try {
+    stmt.run({
+      ':id': resource.id,
+      ':ownerId': resource.ownerId || null,
+      ':title': resource.title,
+      ':type': resource.type,
+      ':course': resource.course || null,
+      ':description': resource.description || null,
+      ':tags': (resource.tags || []).join(', '),
+      ':updatedAt': resource.updatedAt || new Date().toISOString(),
+      ':favorite': resource.favorite ? 1 : 0,
+      ':status': resource.status || 'Uploaded',
+      ':progress': resource.progress || 0,
+      ':tone': resource.tone || null,
+      ':content': resource.content || null,
+      ':filePath': resource.filePath || null,
+    });
+    saveDB();
+  } finally {
+    stmt.free();
+  }
+}
+
+export function findResourceById(id) {
+  const stmt = db.prepare('SELECT * FROM resources WHERE id = :id');
+  try {
+    stmt.bind({ ':id': id });
+    if (stmt.step()) return stmt.getAsObject();
+    return null;
+  } finally {
+    stmt.free();
+  }
+}
+
+export function listResourcesByOwner(ownerId) {
+  const stmt = db.prepare('SELECT * FROM resources WHERE ownerId = :ownerId ORDER BY updatedAt DESC');
+  try {
+    stmt.bind({ ':ownerId': ownerId });
+    const results = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    return results;
   } finally {
     stmt.free();
   }

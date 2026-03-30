@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Resource, ChatMessage, PageName, SortMode } from './types';
 import { initialResources, quickPrompts } from './data/resources';
-import { chatWithAI, summarizeResource } from './utils/api';
+import { chatWithAI, summarizeResource, uploadFile } from './utils/api';
 import TopBar from './components/TopBar';
 import HeroSection from './components/HeroSection';
 import StatsGrid from './components/StatsGrid';
@@ -166,6 +166,19 @@ const App: React.FC = () => {
     localStorage.removeItem('studyflow_user');
   }, []);
 
+  const handleUpload = useCallback(
+    async (file: File) => {
+      const uploaded = await uploadFile({
+        file,
+        ownerId: user.id,
+      });
+
+      setResources((prev) => [uploaded, ...prev]);
+      setSelectedResource(uploaded);
+    },
+    [user.id]
+  );
+
   // If not logged in, show auth page
   if (!user) {
     return (
@@ -200,6 +213,7 @@ const App: React.FC = () => {
           onOpenAssistant={() => setAssistantOpen(true)}
           userNickname={user.nickname}
           onLogout={handleLogout}
+          onUploadFile={handleUpload}
         />
 
         {/* Main Content */}

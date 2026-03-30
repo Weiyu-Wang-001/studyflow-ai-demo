@@ -24,28 +24,42 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype !== 'application/pdf' && path.extname(file.originalname).toLowerCase() !== '.pdf') {
-      return cb(new Error('Only PDF files are allowed'));
-    }
-    cb(null, true);
-  },
 });
+
+function mapToResourceType(file) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mimetype = file.mimetype || '';
+
+  if (mimetype === 'application/pdf' || ext === '.pdf') return 'PDF';
+  if (mimetype.startsWith('image/')) return 'Image';
+  if (mimetype.startsWith('video/')) return 'Video';
+  if (ext === '.ppt' || ext === '.pptx' || ext === '.key' || mimetype.includes('presentation')) return 'Slides';
+  if (mimetype.startsWith('text/') || ext === '.md' || ext === '.txt') return 'Notes';
+  return 'Link';
+}
 
 export const router = (app) => {
   app.post('/api/files/upload', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     try {
-      const buffer = fs.readFileSync(req.file.path);
-      const parsed = await pdfParse(buffer);
-      const text = parsed.text || '';
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const isPdf = req.file.mimetype === 'application/pdf' || ext === '.pdf';
+      let text = '';
+
+      if (isPdf) {
+        const buffer = fs.readFileSync(req.file.path);
+        const parsed = await pdfParse(buffer);
+        text = parsed.text || '';
+      } else if ((req.file.mimetype || '').startsWith('text/') || ext === '.txt' || ext === '.md') {
+        text = fs.readFileSync(req.file.path, 'utf8');
+      }
 
       const resource = {
         id: crypto.randomUUID(),
         ownerId: req.body.ownerId || null,
         title: req.body.title || req.file.originalname,
-        type: 'PDF',
+        type: mapToResourceType(req.file),
         course: req.body.course || 'Uploaded',
         description: req.body.description || '',
         tags: req.body.tags ? req.body.tags.split(',').map((t) => t.trim()) : [],

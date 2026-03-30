@@ -3,6 +3,31 @@ import { Resource } from '../types';
 
 const API_BASE = '/api';
 
+export interface UploadPayload {
+  file: File;
+  ownerId?: string;
+  title?: string;
+  course?: string;
+  description?: string;
+  tags?: string[];
+}
+
+export async function uploadFile(payload: UploadPayload): Promise<Resource> {
+  const formData = new FormData();
+  formData.append('file', payload.file);
+  if (payload.ownerId) formData.append('ownerId', payload.ownerId);
+  if (payload.title) formData.append('title', payload.title);
+  if (payload.course) formData.append('course', payload.course);
+  if (payload.description) formData.append('description', payload.description);
+  if (payload.tags && payload.tags.length) formData.append('tags', payload.tags.join(','));
+
+  const response = await axios.post(`${API_BASE}/files/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return response.data.resource as Resource;
+}
+
 // AI 对话接口
 export async function chatWithAI(
   prompt: string,

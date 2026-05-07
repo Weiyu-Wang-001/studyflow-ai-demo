@@ -20,6 +20,7 @@ export function getIconForType(type: ResourceType): React.ReactElement {
     Link: <LinkIcon {...props} />,
     Notes: <NotesIcon {...props} />,
     Video: <VideoIcon {...props} />,
+    File: <FolderIcon {...props} />,
   };
   return map[type] || <FolderIcon {...props} />;
 }
@@ -32,6 +33,7 @@ export function getEmojiForType(type: ResourceType): string {
     Link: '🔗',
     Notes: '📝',
     Video: '🎬',
+    File: '📁',
   };
   return map[type] || '📁';
 }

@@ -82,7 +82,7 @@ const InsightColumn: React.FC<InsightColumnProps> = ({
           Favorites
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2, mt: 1.2 }}>
-          {favoriteResources.slice(0, 3).map((item) => (
+          {(favoriteResources || []).slice(0, 3).map((item) => (
             <Button
               key={item.id}
               fullWidth
@@ -147,9 +147,9 @@ const InsightColumn: React.FC<InsightColumnProps> = ({
               <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
                 {item.title}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#64748b', lineHeight: 1.5 }}>
-                {item.content.slice(0, 110)}...
-              </Typography>
+                <Typography variant="caption" sx={{ color: '#64748b', lineHeight: 1.5 }}>
+                  {(item.content || '').slice(0, 110)}...
+                </Typography>
             </Paper>
           ))}
         </Box>

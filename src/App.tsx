@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Resource, ChatMessage, PageName, SortMode } from './types';
-import { initialResources, quickPrompts } from './data/resources';
-import { chatWithAI, summarizeResource } from './utils/api';
+import { quickPrompts } from './data/constants';
+import { chatWithAI, summarizeResource, fetchResources, setResourceFavorite, setResourceProgress } from './utils/api';
 import TopBar from './components/TopBar';
+import UploadDialog from './components/UploadDialog';
 import HeroSection from './components/HeroSection';
 import StatsGrid from './components/StatsGrid';
 import ResourceLibrary from './components/ResourceLibrary';
@@ -16,6 +17,7 @@ interface AuthUser {
   id: string;
   username: string;
   nickname: string;
+  token: string;
 }
 
 function getStoredUser(): AuthUser | null {
@@ -38,13 +40,27 @@ const theme = createTheme({
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
-  const [resources, setResources] = useState<Resource[]>(initialResources);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All Areas');
   const [sortMode, setSortMode] = useState<SortMode>('Recent');
   const [activePage, setActivePage] = useState<PageName>('Dashboard');
-  const [selectedResource, setSelectedResource] = useState<Resource>(initialResources[0]);
+  const EMPTY_RESOURCE: Resource = {
+    id: '',
+    title: '',
+    type: 'PDF',
+    course: '',
+    description: '',
+    tags: [],
+    updatedAt: '',
+    favorite: false,
+    status: '',
+    progress: 0,
+    tone: 'slate',
+    content: '',
+  };
+  const [selectedResource, setSelectedResource] = useState<Resource>(EMPTY_RESOURCE);
   const [detailOpen, setDetailOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [history, setHistory] = useState<string[]>([
@@ -59,6 +75,7 @@ const App: React.FC = () => {
     },
   ]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // Filtered resources
   const filteredResources = useMemo(() => {
@@ -89,14 +106,57 @@ const App: React.FC = () => {
     avgProgress: Math.round(resources.reduce((sum, item) => sum + item.progress, 0) / resources.length),
   };
 
+  // Dynamic categories derived from current resources
+  const categoryOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    resources.forEach((r) => { if (r.course) set.add(r.course); });
+    return ['All Areas', ...Array.from(set)];
+  }, [resources]);
+
+  // Fetch public resources for unauthenticated users (initial seed)
+  React.useEffect(() => {
+    let mounted = true;
+    async function loadPublic() {
+      try {
+        const res = await fetch('/api/resources/public');
+        const data = await res.json();
+        if (!mounted) return;
+        if (data && data.success && Array.isArray(data.resources)) {
+          const normalized = data.resources.map((r: any) => ({ ...r, tags: (r.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean) }));
+          setResources(normalized);
+          if (normalized.length > 0) setSelectedResource((prev) => prev.id ? prev : normalized[0]);
+        }
+      } catch (err) {
+        // ignore, will rely on local seedless state
+      }
+    }
+    loadPublic();
+    return () => { mounted = false; };
+  }, []);
+
   const toggleFavorite = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      // optimistic update
       setResources((prev) => prev.map((item) => (item.id === id ? { ...item, favorite: !item.favorite } : item)));
       if (selectedResource?.id === id) {
         setSelectedResource((prev) => ({ ...prev, favorite: !prev.favorite }));
       }
+
+      try {
+        const res = await setResourceFavorite(id, !selectedResource?.favorite, user?.id);
+        // synchronize with server response
+        setResources((prev) => prev.map((item) => (item.id === res.id ? res : item)));
+        if (selectedResource?.id === res.id) setSelectedResource(res);
+      } catch (err) {
+        console.error('Failed to persist favorite change', err);
+        // revert optimistic change
+        setResources((prev) => prev.map((item) => (item.id === id ? { ...item, favorite: !item.favorite } : item)));
+        if (selectedResource?.id === id) {
+          setSelectedResource((prev) => ({ ...prev, favorite: !prev.favorite }));
+        }
+      }
     },
-    [selectedResource]
+    [selectedResource, user]
   );
 
   const openDetail = useCallback((item: Resource) => {
@@ -157,14 +217,41 @@ const App: React.FC = () => {
   }, []);
 
   const handleLoginSuccess = useCallback((u: AuthUser) => {
+    console.log('[App] Login success, setting user:', u.id);
     setUser(u);
-    localStorage.setItem('studyflow_user', JSON.stringify(u));
   }, []);
 
   const handleLogout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('studyflow_user');
   }, []);
+
+  // Fetch persisted resources for logged-in user and merge with local seed data
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      if (!user) return;
+      try {
+        const persisted = await fetchResources(user.id);
+        if (!mounted || !persisted || persisted.length === 0) return;
+        setResources((prev) => {
+          const map = new Map<string, Resource>();
+          // keep existing order from persisted first
+          persisted.forEach((r: Resource) => map.set(r.id, r));
+          prev.forEach((r) => {
+            if (!map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        });
+      } catch (err) {
+        console.error('Failed to fetch persisted resources', err);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
 
   // If not logged in, show auth page
   if (!user) {
@@ -200,6 +287,7 @@ const App: React.FC = () => {
           onOpenAssistant={() => setAssistantOpen(true)}
           userNickname={user.nickname}
           onLogout={handleLogout}
+          onOpenUpload={() => setUploadOpen(true)}
         />
 
         {/* Main Content */}
@@ -234,6 +322,7 @@ const App: React.FC = () => {
               onToggleFavorite={toggleFavorite}
               onOpenDetail={openDetail}
               onResetFilters={resetFilters}
+              categoryOptions={categoryOptions}
             />
 
             <Box
@@ -268,6 +357,29 @@ const App: React.FC = () => {
         onClose={() => setDetailOpen(false)}
         onSummarize={handleSummarize}
         onOpenAssistant={() => setAssistantOpen(true)}
+        onUpdateProgress={async (id, progress) => {
+          // optimistic UI update
+          setResources((prev) => prev.map((r) => (r.id === id ? { ...r, progress } : r)));
+          setSelectedResource((prev) => (prev?.id === id ? { ...prev, progress } : prev));
+          try {
+            const updated = await setResourceProgress(id, progress);
+            setResources((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setSelectedResource((prev) => (prev?.id === updated.id ? updated : prev));
+          } catch (e) {
+            // If save fails, keep optimistic value; user can retry by moving slider again.
+            console.error('Failed to persist progress', e);
+          }
+        }}
+      />
+
+      <UploadDialog
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onUploaded={(resource) => {
+          // prepend uploaded resource
+          setResources((prev) => [resource, ...prev]);
+        }}
+        ownerId={user.id}
       />
 
       {/* AI Assistant */}

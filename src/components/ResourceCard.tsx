@@ -11,6 +11,7 @@ import {
 import { Star, StarBorder } from '@mui/icons-material';
 import { Resource } from '../types';
 import { getIconForType, toneColors } from '../utils/icons';
+import { formatRelativeTime } from '../utils/time';
 
 interface ResourceCardProps {
   resource: Resource;
@@ -157,7 +158,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       {/* Bottom */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
         <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-          {resource.updatedAt}
+          {formatRelativeTime(resource.updatedAt)}
         </Typography>
         <Button
           size="small"

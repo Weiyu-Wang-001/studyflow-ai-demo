@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-const API_KEY = 'sk-9bc15eae614948599919b836a7f44c67';
-const API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+const API_KEY = process.env.TONGYI_API_KEY || process.env.AI_API_KEY || null;
+const API_URL = process.env.TONGYI_API_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+
+if (!API_KEY) {
+  console.warn('Warning: TONGYI_API_KEY not set. AI routes will fallback to local responses.');
+}
 
 async function callQwen(systemPrompt, userContent) {
   const response = await axios.post(
@@ -15,7 +19,7 @@ async function callQwen(systemPrompt, userContent) {
     },
     {
       headers: {
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: API_KEY ? `Bearer ${API_KEY}` : undefined,
         'Content-Type': 'application/json',
       },
       timeout: 30000,

@@ -17,12 +17,14 @@ interface TopBarProps {
   onOpenAssistant: () => void;
   userNickname: string;
   onLogout: () => void;
+  onOpenUpload?: () => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
   onOpenAssistant,
   userNickname,
   onLogout,
+  onOpenUpload,
 }) => {
   return (
     <Paper
@@ -87,6 +89,26 @@ const TopBar: React.FC<TopBarProps> = ({
           }}
         >
           AI
+        </Button>
+
+        <Button
+          size="small"
+          onClick={() => onOpenUpload && onOpenUpload()}
+          sx={{
+            textTransform: 'none',
+            borderRadius: '12px',
+            px: 1.2,
+            py: 0.6,
+            fontWeight: 600,
+            fontSize: 13,
+            color: '#0f172a',
+            background: 'rgba(255,255,255,0.8)',
+            border: '1px solid rgba(148,163,184,0.12)',
+            '&:hover': { background: '#f8fafc' },
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Upload
         </Button>
 
         {/* User */}

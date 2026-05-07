@@ -8,10 +8,37 @@ import {
   IconButton,
   Drawer,
   LinearProgress,
+  Slider,
 } from '@mui/material';
 import { Close as CloseIcon, AutoAwesome as AiIcon, Chat as ChatIcon } from '@mui/icons-material';
 import { Resource } from '../types';
 import { getIconForType } from '../utils/icons';
+
+function getViewUrl(resource: Resource): string | null {
+  // PDFs/images uploaded via backend are stored on disk and served at /uploads/<filename>
+  if (resource.filePath) {
+    const parts = String(resource.filePath).split(/[\\/]/).filter(Boolean);
+    const filename = parts[parts.length - 1];
+    if (filename) return `/uploads/${encodeURIComponent(filename)}`;
+  }
+
+  // Link resources: treat content as URL when it looks like one
+  if (resource.type === 'Link') {
+    const v = String(resource.content || '').trim();
+    if (/^https?:\/\//i.test(v)) return v;
+  }
+
+  return null;
+}
+
+function getPreviewKind(resource: Resource, viewUrl: string | null): 'pdf' | 'image' | 'video' | 'link' | 'none' {
+  if (!viewUrl) return 'none';
+  if (resource.type === 'PDF') return 'pdf';
+  if (resource.type === 'Image') return 'image';
+  if (resource.type === 'Video') return 'video';
+  if (resource.type === 'Link') return 'link';
+  return 'none';
+}
 
 interface DetailDrawerProps {
   open: boolean;
@@ -19,6 +46,7 @@ interface DetailDrawerProps {
   onClose: () => void;
   onSummarize: () => void;
   onOpenAssistant: () => void;
+  onUpdateProgress: (id: string, progress: number) => void;
 }
 
 const DetailDrawer: React.FC<DetailDrawerProps> = ({
@@ -27,8 +55,36 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
   onClose,
   onSummarize,
   onOpenAssistant,
+  onUpdateProgress,
 }) => {
   if (!resource) return null;
+
+  const viewUrl = getViewUrl(resource);
+  const previewKind = getPreviewKind(resource, viewUrl);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const saveTimerRef = React.useRef<number | null>(null);
+  const lastSavedRef = React.useRef<number>(Number(resource.progress) || 0);
+  const [localProgress, setLocalProgress] = React.useState<number>(Number(resource.progress) || 0);
+
+  React.useEffect(() => {
+    setLocalProgress(Number(resource.progress) || 0);
+    lastSavedRef.current = Number(resource.progress) || 0;
+  }, [resource.id, resource.progress]);
+
+  const scheduleSave = React.useCallback((next: number) => {
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      if (Math.abs(next - lastSavedRef.current) < 1) return;
+      lastSavedRef.current = next;
+      onUpdateProgress(resource.id, next);
+    }, 450);
+  }, [onUpdateProgress, resource.id]);
+
+  const setProgress = React.useCallback((next: number, opts?: { persist?: boolean }) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(next)));
+    setLocalProgress(clamped);
+    if (opts?.persist) scheduleSave(clamped);
+  }, [scheduleSave]);
 
   return (
     <Drawer
@@ -155,9 +211,111 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           >
             Preview Content
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5, lineHeight: 1.65 }}>
-            {resource.content}
-          </Typography>
+          {previewKind === 'pdf' && (
+            <Box
+              sx={{
+                mt: 1,
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid rgba(148,163,184,0.25)',
+                background: '#fff',
+                height: 380,
+              }}
+            >
+              <Box
+                component="iframe"
+                title={resource.title}
+                src={viewUrl!}
+                sx={{ width: '100%', height: '100%', border: 0 }}
+              />
+            </Box>
+          )}
+
+          {previewKind === 'image' && (
+            <Box
+              sx={{
+                mt: 1,
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid rgba(148,163,184,0.25)',
+                background: '#fff',
+              }}
+            >
+              <Box
+                component="img"
+                alt={resource.title}
+                src={viewUrl!}
+                sx={{ display: 'block', width: '100%', maxHeight: 420, objectFit: 'contain', background: '#0b1220' }}
+              />
+            </Box>
+          )}
+
+          {previewKind === 'video' && (
+            <Box
+              sx={{
+                mt: 1,
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid rgba(148,163,184,0.25)',
+                background: '#0b1220',
+              }}
+            >
+              <Box
+                component="video"
+                src={viewUrl!}
+                controls
+                preload="metadata"
+                ref={videoRef}
+                onLoadedMetadata={(e) => {
+                  const el = e.currentTarget;
+                  if (Number.isFinite(el.duration) && el.duration > 0) {
+                    const t = (localProgress / 100) * el.duration;
+                    if (Number.isFinite(t)) el.currentTime = t;
+                  }
+                }}
+                onTimeUpdate={(e) => {
+                  const el = e.currentTarget;
+                  if (!Number.isFinite(el.duration) || el.duration <= 0) return;
+                  const next = (el.currentTime / el.duration) * 100;
+                  setProgress(next);
+                  scheduleSave(Math.max(0, Math.min(100, Math.round(next))));
+                }}
+                sx={{ display: 'block', width: '100%', maxHeight: 420, background: '#0b1220' }}
+              />
+            </Box>
+          )}
+
+          {previewKind === 'none' && (
+            <Box sx={{ mt: 1 }}>
+              {resource.content ? (
+                <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  {resource.content}
+                </Typography>
+              ) : viewUrl ? (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    mt: 1,
+                    borderRadius: '14px',
+                    p: 1.5,
+                    borderColor: 'rgba(148,163,184,0.22)',
+                    background: 'rgba(255,255,255,0.9)',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: '#64748b', lineHeight: 1.5 }}>
+                    No inline preview available for this file type.
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                    Use “View Resource” to open/download.
+                  </Typography>
+                </Paper>
+              ) : (
+                <Typography variant="body2" sx={{ color: '#94a3b8', mt: 0.5 }}>
+                  No preview available.
+                </Typography>
+              )}
+            </Box>
+          )}
         </Paper>
 
         {/* Progress - full width */}
@@ -180,7 +338,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
             <LinearProgress
               variant="determinate"
-              value={resource.progress}
+              value={localProgress}
               sx={{
                 flex: 1,
                 height: 8,
@@ -193,8 +351,26 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
               }}
             />
             <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 36 }}>
-              {resource.progress}%
+              {localProgress}%
             </Typography>
+          </Box>
+          <Box sx={{ mt: 1.2 }}>
+            <Slider
+              value={localProgress}
+              onChange={(_, v) => setProgress(Number(v))}
+              onChangeCommitted={(_, v) => {
+                const next = Number(v);
+                setProgress(next, { persist: true });
+                if (resource.type === 'Video' && videoRef.current && Number.isFinite(videoRef.current.duration) && videoRef.current.duration > 0) {
+                  videoRef.current.currentTime = (Math.max(0, Math.min(100, Math.round(next))) / 100) * videoRef.current.duration;
+                }
+              }}
+              min={0}
+              max={100}
+              step={1}
+              size="small"
+              sx={{ color: '#295df4' }}
+            />
           </Box>
         </Paper>
 
@@ -217,13 +393,35 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       </Box>
 
       {/* Actions */}
-      <Box sx={{ display: 'flex', gap: 1.2, mt: 3 }}>
+      <Box sx={{ display: 'flex', gap: 1.2, mt: 3, flexWrap: 'wrap' }}>
+        {viewUrl && (
+          <Button
+            variant="outlined"
+            onClick={() => window.open(viewUrl, '_blank', 'noopener,noreferrer')}
+            sx={{
+              flex: 1,
+              minWidth: 150,
+              borderRadius: '16px',
+              textTransform: 'none',
+              fontWeight: 700,
+              py: 1.2,
+              color: '#0f172a',
+              borderColor: 'rgba(148,163,184,0.22)',
+              background: 'rgba(255,255,255,0.88)',
+              '&:hover': { transform: 'translateY(-1px)', background: '#f8fafc' },
+              transition: 'all 0.18s ease',
+            }}
+          >
+            View Resource
+          </Button>
+        )}
         <Button
           variant="contained"
           startIcon={<AiIcon />}
           onClick={onSummarize}
           sx={{
             flex: 1,
+            minWidth: 150,
             borderRadius: '16px',
             textTransform: 'none',
             fontWeight: 600,
@@ -241,6 +439,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           onClick={onOpenAssistant}
           sx={{
             flex: 1,
+            minWidth: 150,
             borderRadius: '16px',
             textTransform: 'none',
             fontWeight: 600,

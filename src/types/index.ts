@@ -1,7 +1,8 @@
-export type ResourceType = 'PDF' | 'Slides' | 'Image' | 'Link' | 'Notes' | 'Video';
+export type ResourceType = 'PDF' | 'Slides' | 'Image' | 'Link' | 'Notes' | 'Video' | 'File';
 
 export interface Resource {
   id: string;
+  ownerId?: string;
   title: string;
   type: ResourceType;
   course: string;
@@ -13,6 +14,7 @@ export interface Resource {
   progress: number;
   tone: string;
   content: string;
+  filePath?: string;
 }
 
 export interface ChatMessage {

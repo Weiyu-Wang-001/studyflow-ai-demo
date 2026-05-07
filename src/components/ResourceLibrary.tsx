@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, FilterAltOff as ResetIcon } from '@mui/icons-material';
 import { Resource, PageName, SortMode } from '../types';
-import { typeOptions, categoryOptions } from '../data/resources';
+import { typeOptions } from '../data/constants';
 import ResourceCard from './ResourceCard';
 import EmptyState from './EmptyState';
 
@@ -30,6 +30,7 @@ interface ResourceLibraryProps {
   onToggleFavorite: (id: string) => void;
   onOpenDetail: (resource: Resource) => void;
   onResetFilters: () => void;
+  categoryOptions: string[];
 }
 
 const ResourceLibrary: React.FC<ResourceLibraryProps> = ({
@@ -46,6 +47,7 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({
   onToggleFavorite,
   onOpenDetail,
   onResetFilters,
+  categoryOptions,
 }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>

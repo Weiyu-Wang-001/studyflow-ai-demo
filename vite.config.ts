@@ -8,6 +8,15 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3008',
         changeOrigin: true,
+        timeout: 10 * 60 * 1000,
+        proxyTimeout: 10 * 60 * 1000,
+      },
+      // Uploaded files are served by the backend at /uploads/*
+      '/uploads': {
+        target: 'http://localhost:3008',
+        changeOrigin: true,
+        timeout: 10 * 60 * 1000,
+        proxyTimeout: 10 * 60 * 1000,
       },
     },
   },

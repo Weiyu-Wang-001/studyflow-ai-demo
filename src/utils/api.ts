@@ -9,23 +9,43 @@ export interface UploadPayload {
   title?: string;
   course?: string;
   description?: string;
-  tags?: string[];
+  tags?: string[] | string;
 }
 
-export async function uploadFile(payload: UploadPayload): Promise<Resource> {
-  const formData = new FormData();
-  formData.append('file', payload.file);
-  if (payload.ownerId) formData.append('ownerId', payload.ownerId);
-  if (payload.title) formData.append('title', payload.title);
-  if (payload.course) formData.append('course', payload.course);
-  if (payload.description) formData.append('description', payload.description);
-  if (payload.tags && payload.tags.length) formData.append('tags', payload.tags.join(','));
+type UploadOptions = { title?: string; course?: string; description?: string; tags?: string; ownerId?: string };
 
-  const response = await axios.post(`${API_BASE}/files/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+function getAuthHeaders() {
+  try {
+    const raw = localStorage.getItem('studyflow_user');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed?.token) return {};
+    return { Authorization: `Bearer ${parsed.token}` };
+  } catch (e) {
+    console.warn('[API] getAuthHeaders error:', e);
+    return {};
+  }
+}
 
-  return response.data.resource as Resource;
+function normalizeTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.map((t) => String(t).trim()).filter(Boolean);
+  if (typeof tags === 'string') {
+    return tags
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeResource(resource: any): Resource {
+  return {
+    ...resource,
+    tags: normalizeTags(resource?.tags),
+    favorite: Boolean(resource?.favorite),
+    progress: Number(resource?.progress || 0),
+    updatedAt: resource?.updatedAt || new Date().toISOString(),
+  } as Resource;
 }
 
 // AI 对话接口
@@ -34,12 +54,14 @@ export async function chatWithAI(
   resource?: Resource | null
 ): Promise<string> {
   try {
-    const response = await axios.post(`${API_BASE}/ai/chat`, {
-      prompt,
-      resource: resource
-        ? { title: resource.title, content: resource.content, type: resource.type, course: resource.course }
-        : null,
-    });
+    const response = await axios.post(
+      `${API_BASE}/ai/chat`,
+      {
+        prompt,
+        resource: resource ? { title: resource.title, content: resource.content, type: resource.type, course: resource.course } : null,
+      },
+      { headers: getAuthHeaders() }
+    );
     return response.data.reply;
   } catch (error) {
     console.error('AI chat error:', error);
@@ -50,13 +72,17 @@ export async function chatWithAI(
 // AI 总结接口
 export async function summarizeResource(resource: Resource): Promise<string> {
   try {
-    const response = await axios.post(`${API_BASE}/ai/summarize`, {
-      title: resource.title,
-      content: resource.content,
-      type: resource.type,
-      course: resource.course,
-      tags: resource.tags,
-    });
+    const response = await axios.post(
+      `${API_BASE}/ai/summarize`,
+      {
+        title: resource.title,
+        content: resource.content,
+        type: resource.type,
+        course: resource.course,
+        tags: resource.tags,
+      },
+      { headers: getAuthHeaders() }
+    );
     return response.data.summary;
   } catch (error) {
     console.error('AI summarize error:', error);
@@ -90,4 +116,79 @@ function fallbackAI(prompt: string, resource?: Resource | null): string {
   }
 
   return 'This is a UI-first learning dashboard combining searchable resources, clean layout, and AI-powered assistance for summarization and Q&A.';
+}
+
+// uploadFile: accept either UploadPayload object or (file, opts)
+export async function uploadFile(payload: UploadPayload): Promise<Resource>;
+export async function uploadFile(file: File, opts?: UploadOptions): Promise<Resource>;
+export async function uploadFile(arg1: any, arg2?: any): Promise<Resource> {
+  let file: File;
+  let opts: UploadOptions | undefined;
+  if (arg1 && arg1.file instanceof File) {
+    file = arg1.file;
+    opts = {
+      title: arg1.title,
+      course: arg1.course,
+      description: arg1.description,
+      tags: Array.isArray(arg1.tags) ? (arg1.tags as string[]).join(',') : (arg1.tags as string | undefined),
+      ownerId: arg1.ownerId,
+    };
+  } else {
+    file = arg1 as File;
+    opts = arg2 as UploadOptions | undefined;
+  }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  if (opts?.ownerId) fd.append('ownerId', opts.ownerId);
+  if (opts?.title) fd.append('title', opts.title);
+  if (opts?.course) fd.append('course', opts.course);
+  if (opts?.description) fd.append('description', opts.description);
+  if (opts?.tags) fd.append('tags', opts.tags);
+
+  const response = await axios.post(`${API_BASE}/files/upload`, fd, {
+    headers: { ...getAuthHeaders() },
+  });
+
+  return normalizeResource(response.data.resource);
+}
+
+// Fetch persisted resources (optionally by owner)
+export async function fetchResources(ownerId?: string) {
+  try {
+    const url = ownerId ? `${API_BASE}/files/resources?ownerId=${encodeURIComponent(ownerId)}` : `${API_BASE}/files/resources`;
+    const headers = getAuthHeaders();
+    const response = await axios.get(url, { headers });
+    const resources = Array.isArray(response.data.resources) ? response.data.resources : [];
+    return resources.map(normalizeResource);
+  } catch (error) {
+    console.error('Fetch resources error:', error);
+    return [] as Resource[];
+  }
+}
+
+// Set favorite on a resource (ownerId required for owner-protected resources)
+export async function setResourceFavorite(resourceId: string, favorite: boolean, ownerId?: string) {
+  try {
+    const response = await axios.post(`${API_BASE}/resources/${encodeURIComponent(resourceId)}/favorite`, {
+      ownerId,
+      favorite,
+    }, { headers: getAuthHeaders() });
+    return normalizeResource(response.data.resource);
+  } catch (error) {
+    console.error('Set favorite error:', error);
+    throw error;
+  }
+}
+
+export async function setResourceProgress(resourceId: string, progress: number) {
+  try {
+    const response = await axios.post(`${API_BASE}/resources/${encodeURIComponent(resourceId)}/progress`, {
+      progress,
+    }, { headers: getAuthHeaders() });
+    return normalizeResource(response.data.resource);
+  } catch (error) {
+    console.error('Set progress error:', error);
+    throw error;
+  }
 }

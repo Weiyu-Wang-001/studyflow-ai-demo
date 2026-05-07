@@ -22,7 +22,7 @@ import {
 import axios from 'axios';
 
 interface AuthPageProps {
-  onLoginSuccess: (user: { id: string; username: string; nickname: string }) => void;
+  onLoginSuccess: (user: { id: string; username: string; nickname: string; token: string }) => void;
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
@@ -34,6 +34,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [exiting, setExiting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +52,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       if (isLogin) {
         const res = await axios.post('/api/auth/login', { username: username.trim(), password });
         if (res.data.success) {
-          localStorage.setItem('studyflow_user', JSON.stringify(res.data.user));
-          onLoginSuccess(res.data.user);
+          const userWithToken = { ...res.data.user, token: res.data.token };
+          localStorage.setItem('studyflow_user', JSON.stringify(userWithToken));
+          // Trigger Fade exit then call onLoginSuccess after the transition completes
+          setExiting(true);
+          setTimeout(() => onLoginSuccess(userWithToken), 600); // match Fade timeout
         }
       } else {
         if (username.trim().length < 3) {
@@ -71,9 +75,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           nickname: nickname.trim() || username.trim(),
         });
         if (res.data.success) {
-          setSuccess('Registration successful! Please log in.');
-          setIsLogin(true);
-          setPassword('');
+          const userWithToken = { ...res.data.user, token: res.data.token };
+          localStorage.setItem('studyflow_user', JSON.stringify(userWithToken));
+          setExiting(true);
+          setTimeout(() => onLoginSuccess(userWithToken), 600);
         }
       }
     } catch (err: any) {

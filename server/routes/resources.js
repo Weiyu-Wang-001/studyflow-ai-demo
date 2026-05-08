@@ -1,4 +1,6 @@
-import { updateResourceFavorite, updateResourceProgress, findResourceById, listFavoritesByOwner, listAllResources } from '../db.js';
+import fs from 'fs';
+import path from 'path';
+import { updateResourceFavorite, updateResourceProgress, deleteResourceById, findResourceById, listFavoritesByOwner, listAllResources } from '../db.js';
 import { validateFavoritePayload, validateProgressPayload, validateResourceId, validateOwnerId } from '../validators.js';
 import { requireAuth } from '../auth.js';
 
@@ -62,6 +64,37 @@ export const router = (app) => {
       console.error('Progress update error:', err);
       const statusCode = err.message?.includes('Progress') || err.message?.includes('number') ? 400 : 500;
       res.status(statusCode).json({ error: err.message || 'Failed to update progress' });
+    }
+  });
+
+  app.delete('/api/resources/:id', requireAuth, (req, res) => {
+    try {
+      const id = validateResourceId(req.params.id);
+      const existing = findResourceById(id);
+
+      if (!existing) return res.status(404).json({ error: 'Resource not found' });
+      if (!existing.ownerId) {
+        return res.status(403).json({ error: 'Seeded resources cannot be deleted' });
+      }
+      if (existing.ownerId !== req.user.id) {
+        return res.status(403).json({ error: 'Not authorized to delete this resource' });
+      }
+
+      if (existing.filePath) {
+        const absolutePath = path.isAbsolute(existing.filePath)
+          ? existing.filePath
+          : path.join(process.cwd(), existing.filePath);
+        if (fs.existsSync(absolutePath)) {
+          fs.unlinkSync(absolutePath);
+        }
+      }
+
+      deleteResourceById(id);
+      res.json({ success: true, deletedId: id });
+    } catch (err) {
+      console.error('Delete resource error:', err);
+      const statusCode = err.message?.includes('format') || err.message?.includes('required') ? 400 : 500;
+      res.status(statusCode).json({ error: err.message || 'Failed to delete resource' });
     }
   });
 

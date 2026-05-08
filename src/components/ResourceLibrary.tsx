@@ -9,8 +9,10 @@ import {
   Select,
   MenuItem,
   InputAdornment,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import { Search as SearchIcon, FilterAltOff as ResetIcon } from '@mui/icons-material';
+import { Search as SearchIcon, FilterAltOff as ResetIcon, DeleteOutline as DeleteIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { Resource, PageName, SortMode } from '../types';
 import { typeOptions } from '../data/constants';
 import ResourceCard from './ResourceCard';
@@ -31,6 +33,12 @@ interface ResourceLibraryProps {
   onOpenDetail: (resource: Resource) => void;
   onResetFilters: () => void;
   categoryOptions: string[];
+  selectedResourceIds: string[];
+  onToggleSelectResource: (id: string) => void;
+  onClearSelection: () => void;
+  onDeleteSelected: () => void;
+  deletingSelected: boolean;
+  deletableSelectedCount: number;
 }
 
 const ResourceLibrary: React.FC<ResourceLibraryProps> = ({
@@ -48,10 +56,49 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({
   onOpenDetail,
   onResetFilters,
   categoryOptions,
+  selectedResourceIds,
+  onToggleSelectResource,
+  onClearSelection,
+  onDeleteSelected,
+  deletingSelected,
+  deletableSelectedCount,
 }) => {
+  const selectedCount = selectedResourceIds.length;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {/* Toolbar */}
+      {selectedCount > 0 && (
+        <Alert
+          severity="info"
+          action={
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                size="small"
+                onClick={onClearSelection}
+                startIcon={<ClearIcon />}
+                sx={{ textTransform: 'none', fontWeight: 700 }}
+              >
+                Clear
+              </Button>
+              <Button
+                size="small"
+                color="error"
+                variant="contained"
+                onClick={onDeleteSelected}
+                startIcon={deletingSelected ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon />}
+                disabled={deletingSelected || deletableSelectedCount === 0}
+                sx={{ textTransform: 'none', fontWeight: 700 }}
+              >
+                Delete {deletableSelectedCount}
+              </Button>
+            </Box>
+          }
+          sx={{ borderRadius: '18px', alignItems: 'center' }}
+        >
+          {selectedCount} resource{selectedCount === 1 ? '' : 's'} selected{deletableSelectedCount !== selectedCount ? `, ${deletableSelectedCount} deletable` : ''}
+        </Alert>
+      )}
       <Paper
         elevation={0}
         sx={{
@@ -209,6 +256,9 @@ const ResourceLibrary: React.FC<ResourceLibraryProps> = ({
             resource={item}
             onToggleFavorite={onToggleFavorite}
             onOpenDetail={onOpenDetail}
+            selectable
+            selected={selectedResourceIds.includes(item.id)}
+            onToggleSelect={onToggleSelectResource}
           />
         ))}
       </Box>

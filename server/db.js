@@ -363,6 +363,16 @@ export function updateResourceProgress(id, progress) {
   }
 }
 
+export function deleteResourceById(id) {
+  const stmt = db.prepare('DELETE FROM resources WHERE id = :id');
+  try {
+    stmt.run({ ':id': id });
+    saveDB();
+  } finally {
+    stmt.free();
+  }
+}
+
 export function listFavoritesByOwner(ownerId) {
   const stmt = db.prepare('SELECT * FROM resources WHERE ownerId = :ownerId AND favorite = 1 ORDER BY updatedAt DESC');
   try {

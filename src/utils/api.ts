@@ -12,6 +12,15 @@ export interface UploadPayload {
   tags?: string[] | string;
 }
 
+export interface GoogleDriveImportPayload {
+  folderId: string;
+  accessToken: string;
+  ownerId?: string;
+  course?: string;
+  description?: string;
+  tags?: string[] | string;
+}
+
 type UploadOptions = { title?: string; course?: string; description?: string; tags?: string; ownerId?: string };
 
 function getAuthHeaders() {
@@ -46,6 +55,10 @@ function normalizeResource(resource: any): Resource {
     progress: Number(resource?.progress || 0),
     updatedAt: resource?.updatedAt || new Date().toISOString(),
   } as Resource;
+}
+
+function normalizeResources(resources: any): Resource[] {
+  return Array.isArray(resources) ? resources.map(normalizeResource) : [];
 }
 
 // AI 对话接口
@@ -153,6 +166,23 @@ export async function uploadFile(arg1: any, arg2?: any): Promise<Resource> {
   return normalizeResource(response.data.resource);
 }
 
+export async function importGoogleDriveFolder(payload: GoogleDriveImportPayload): Promise<Resource[]> {
+  const response = await axios.post(
+    `${API_BASE}/google-drive/import`,
+    {
+      folderId: payload.folderId,
+      accessToken: payload.accessToken,
+      ownerId: payload.ownerId,
+      course: payload.course,
+      description: payload.description,
+      tags: payload.tags,
+    },
+    { headers: getAuthHeaders() }
+  );
+
+  return normalizeResources(response.data.resources);
+}
+
 // Fetch persisted resources (optionally by owner)
 export async function fetchResources(ownerId?: string) {
   try {
@@ -189,6 +219,18 @@ export async function setResourceProgress(resourceId: string, progress: number) 
     return normalizeResource(response.data.resource);
   } catch (error) {
     console.error('Set progress error:', error);
+    throw error;
+  }
+}
+
+export async function deleteResource(resourceId: string) {
+  try {
+    const response = await axios.delete(`${API_BASE}/resources/${encodeURIComponent(resourceId)}`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Delete resource error:', error);
     throw error;
   }
 }

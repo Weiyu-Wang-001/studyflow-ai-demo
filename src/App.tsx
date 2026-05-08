@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Resource, ChatMessage, PageName, SortMode } from './types';
 import { quickPrompts } from './data/constants';
-import { chatWithAI, summarizeResource, fetchResources, setResourceFavorite, setResourceProgress, uploadFile } from './utils/api';
+import { chatWithAI, summarizeResource, fetchResources, setResourceFavorite, setResourceProgress, uploadFile, deleteResource } from './utils/api';
 import TopBar from './components/TopBar';
 import UploadDialog from './components/UploadDialog';
 import HeroSection from './components/HeroSection';
@@ -63,6 +63,8 @@ const App: React.FC = () => {
   const [selectedResource, setSelectedResource] = useState<Resource>(EMPTY_RESOURCE);
   const [detailOpen, setDetailOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const [deletingSelected, setDeletingSelected] = useState(false);
   const [history, setHistory] = useState<string[]>([
     'OpenFlow Lecture 4',
     'Final Demo Flow',
@@ -237,6 +239,70 @@ const App: React.FC = () => {
     setSortMode('Recent');
   }, []);
 
+  const toggleSelectResource = useCallback((id: string) => {
+    setSelectedResourceIds((prev) => (
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    ));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedResourceIds([]);
+  }, []);
+
+  const deletableSelectedCount = useMemo(
+    () => resources.filter((resource) => selectedResourceIds.includes(resource.id) && resource.ownerId).length,
+    [resources, selectedResourceIds]
+  );
+
+  const deleteSelected = useCallback(async () => {
+    if (selectedResourceIds.length === 0 || deletingSelected) return;
+
+    const deletable = resources.filter((resource) => selectedResourceIds.includes(resource.id) && resource.ownerId);
+    const blocked = selectedResourceIds.length - deletable.length;
+
+    if (deletable.length === 0) {
+      setSelectedResourceIds([]);
+      return;
+    }
+
+    setDeletingSelected(true);
+    try {
+      await Promise.all(deletable.map((resource) => deleteResource(resource.id)));
+      const deletedIds = new Set(deletable.map((resource) => resource.id));
+      setResources((prev) => prev.filter((resource) => !deletedIds.has(resource.id)));
+      setSelectedResourceIds((prev) => prev.filter((id) => !deletedIds.has(id)));
+
+      if (selectedResource?.id && deletedIds.has(selectedResource.id)) {
+        const nextSelected = resources.find((resource) => !deletedIds.has(resource.id) && resource.ownerId) || null;
+        if (nextSelected) {
+          setSelectedResource(nextSelected);
+        } else {
+          setSelectedResource({
+            id: '',
+            title: '',
+            type: 'PDF',
+            course: '',
+            description: '',
+            tags: [],
+            updatedAt: '',
+            favorite: false,
+            status: '',
+            progress: 0,
+            tone: 'slate',
+            content: '',
+          });
+          setDetailOpen(false);
+        }
+      }
+
+      if (blocked > 0) {
+        console.warn(`Skipped ${blocked} seeded resource(s) because they cannot be deleted.`);
+      }
+    } finally {
+      setDeletingSelected(false);
+    }
+  }, [deletingSelected, resources, selectedResource?.id, selectedResourceIds]);
+
   const handleLoginSuccess = useCallback((u: AuthUser) => {
     console.log('[App] Login success, setting user:', u.id);
     setUser(u);
@@ -359,6 +425,12 @@ const App: React.FC = () => {
               onOpenDetail={openDetail}
               onResetFilters={resetFilters}
               categoryOptions={categoryOptions}
+              selectedResourceIds={selectedResourceIds}
+              onToggleSelectResource={toggleSelectResource}
+              onClearSelection={clearSelection}
+              onDeleteSelected={deleteSelected}
+              deletingSelected={deletingSelected}
+              deletableSelectedCount={deletableSelectedCount}
             />
 
             <Box

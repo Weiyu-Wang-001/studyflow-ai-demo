@@ -16,6 +16,7 @@ await initDB();
 const { aiChat, aiSummarize } = await import('./routes/ai.js');
 const { register, login, me, authMiddleware } = await import('./routes/auth.js');
 const uploadModule = await import('./routes/upload.js');
+const googleDriveModule = await import('./routes/googleDrive.js');
 const resourcesModule = await import('./routes/resources.js');
 
 app.use(cors());
@@ -53,6 +54,7 @@ app.post('/api/ai/summarize', aiSummarize);
 
 // Resource routes
 uploadModule.router(app);
+googleDriveModule.router(app);
 resourcesModule.router(app);
 
 // Health check

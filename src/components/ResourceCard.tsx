@@ -7,6 +7,7 @@ import {
   Paper,
   IconButton,
   LinearProgress,
+  Checkbox,
 } from '@mui/material';
 import { Star, StarBorder } from '@mui/icons-material';
 import { Resource } from '../types';
@@ -17,12 +18,18 @@ interface ResourceCardProps {
   resource: Resource;
   onToggleFavorite: (id: string) => void;
   onOpenDetail: (resource: Resource) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
   onToggleFavorite,
   onOpenDetail,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }) => {
   const toneColor = toneColors[resource.tone] || '#64748b';
 
@@ -71,17 +78,34 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     >
       {/* Top row */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Chip
-          icon={<Box sx={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>{getIconForType(resource.type)}</Box>}
-          label={resource.type}
-          size="small"
-          sx={{
-            borderRadius: '999px',
-            fontSize: 12,
-            background: 'rgba(255,255,255,0.92)',
-            border: '1px solid rgba(148,163,184,0.22)',
-          }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {selectable && (
+            <Checkbox
+              checked={selected}
+              onChange={() => onToggleSelect?.(resource.id)}
+              onClick={(e) => e.stopPropagation()}
+              size="small"
+              sx={{
+                p: 0.4,
+                borderRadius: '10px',
+                background: 'rgba(255,255,255,0.88)',
+                border: '1px solid rgba(148,163,184,0.22)',
+                '&:hover': { background: 'rgba(255,255,255,0.96)' },
+              }}
+            />
+          )}
+          <Chip
+            icon={<Box sx={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>{getIconForType(resource.type)}</Box>}
+            label={resource.type}
+            size="small"
+            sx={{
+              borderRadius: '999px',
+              fontSize: 12,
+              background: 'rgba(255,255,255,0.92)',
+              border: '1px solid rgba(148,163,184,0.22)',
+            }}
+          />
+        </Box>
         <IconButton
           size="small"
           onClick={() => onToggleFavorite(resource.id)}

@@ -138,7 +138,16 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
                 {msg.role === 'assistant' ? 'AI' : 'You'}
               </Typography>
             </Box>
-            <Typography variant="body2" sx={{ color: '#475569', lineHeight: 1.6 }}>
+            <Typography
+              component="div"
+              variant="body2"
+              sx={{
+                color: '#475569',
+                lineHeight: 1.8,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
               {msg.text}
             </Typography>
           </Paper>

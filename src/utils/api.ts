@@ -83,7 +83,12 @@ export async function chatWithAI(
 }
 
 // AI 总结接口
-export async function summarizeResource(resource: Resource): Promise<string> {
+export interface SummarizeResult {
+  summary: string;
+  suggestions: string[];
+}
+
+export async function summarizeResource(resource: Resource): Promise<SummarizeResult> {
   try {
     const response = await axios.post(
       `${API_BASE}/ai/summarize`,
@@ -96,10 +101,14 @@ export async function summarizeResource(resource: Resource): Promise<string> {
       },
       { headers: getAuthHeaders() }
     );
-    return response.data.summary;
+    return {
+      summary: response.data.summary || '',
+      suggestions: Array.isArray(response.data.suggestions) ? response.data.suggestions : [],
+    };
   } catch (error) {
     console.error('AI summarize error:', error);
-    return fallbackAI('Summarize the selected resource', resource);
+    // Fallback returns summary text in summary and empty suggestions
+    return { summary: fallbackAI('Summarize the selected resource', resource), suggestions: [] };
   }
 }
 

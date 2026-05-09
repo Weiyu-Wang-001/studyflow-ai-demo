@@ -11,6 +11,7 @@ import {
   AutoAwesome as AiIcon,
   LogoutRounded as LogoutIcon,
   UploadFileRounded as UploadIcon,
+  AnalyticsOutlined as AnalyticsIcon,
 } from '@mui/icons-material';
 
 interface TopBarProps {
@@ -18,6 +19,7 @@ interface TopBarProps {
   userNickname: string;
   onLogout: () => void;
   onOpenUpload?: () => void;
+  onOpenAnalytics?: () => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -25,6 +27,7 @@ const TopBar: React.FC<TopBarProps> = ({
   userNickname,
   onLogout,
   onOpenUpload,
+  onOpenAnalytics,
 }) => {
   return (
     <Paper
@@ -65,6 +68,28 @@ const TopBar: React.FC<TopBarProps> = ({
       <Box sx={{ flex: 1 }} />
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexShrink: 0 }}>
+        <Button
+          size="small"
+          startIcon={<AnalyticsIcon sx={{ fontSize: 16 }} />}
+          onClick={onOpenAnalytics}
+          sx={{
+            textTransform: 'none',
+            borderRadius: '12px',
+            px: 1.8,
+            py: 0.8,
+            fontWeight: 600,
+            fontSize: 13,
+            color: '#3b82f6',
+            background: 'rgba(59,130,246,0.08)',
+            border: '1px solid rgba(59,130,246,0.14)',
+            '&:hover': {
+              background: 'rgba(59,130,246,0.14)',
+            },
+          }}
+        >
+          Analytics
+        </Button>
+
         <Button
           size="small"
           startIcon={<UploadIcon sx={{ fontSize: 16 }} />}

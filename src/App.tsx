@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, Dialog } from '@mui/material';
 import { Resource, ChatMessage, PageName, SortMode } from './types';
 import { quickPrompts } from './data/constants';
 import { chatWithAI, summarizeResource, fetchResources, setResourceFavorite, setResourceProgress, uploadFile, deleteResource } from './utils/api';
@@ -9,6 +9,7 @@ import HeroSection from './components/HeroSection';
 import StatsGrid from './components/StatsGrid';
 import ResourceLibrary from './components/ResourceLibrary';
 import InsightColumn from './components/InsightColumn';
+import Analytics from './components/Analytics';
 import DetailDrawer from './components/DetailDrawer';
 import AIAssistant from './components/AIAssistant';
 import AuthPage from './components/AuthPage';
@@ -78,6 +79,7 @@ const App: React.FC = () => {
   ]);
   const [aiLoading, setAiLoading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   // Filtered resources
   const filteredResources = useMemo(() => {
@@ -220,8 +222,14 @@ const App: React.FC = () => {
     setAiLoading(true);
 
     try {
-      const summary = await summarizeResource(selectedResource);
-      setMessages((prev) => [...prev, { role: 'assistant', text: summary }]);
+      const result = await summarizeResource(selectedResource);
+      // Show summary and suggestions in a single structured message
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: result.summary,
+        summary: result.summary,
+        suggestions: result.suggestions,
+      }]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -390,71 +398,80 @@ const App: React.FC = () => {
           userNickname={user.nickname}
           onLogout={handleLogout}
           onOpenUpload={() => setUploadOpen(true)}
+          onOpenAnalytics={() => setAnalyticsOpen(true)}
         />
 
         {/* Main Content */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <HeroSection
-            selectedResource={selectedResource}
-            onOpenAssistant={() => setAssistantOpen(true)}
-            onOpenDetail={() => setDetailOpen(true)}
-          />
-
-          <StatsGrid {...stats} />
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', xl: 'minmax(0,1fr) 340px' },
-              gap: 2,
-              minWidth: 0,
-            }}
-          >
-            <ResourceLibrary
-              activePage={activePage}
-              filteredResources={filteredResources}
-              search={search}
-              onSearchChange={setSearch}
-              selectedType={selectedType}
-              onTypeChange={setSelectedType}
-              selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
-              sortMode={sortMode}
-              onSortChange={setSortMode}
-              onToggleFavorite={toggleFavorite}
-              onOpenDetail={openDetail}
-              onResetFilters={resetFilters}
-              categoryOptions={categoryOptions}
-              selectedResourceIds={selectedResourceIds}
-              onToggleSelectResource={toggleSelectResource}
-              onClearSelection={clearSelection}
-              onDeleteSelected={deleteSelected}
-              deletingSelected={deletingSelected}
-              deletableSelectedCount={deletableSelectedCount}
-            />
-
-            <Box
-              sx={{
-                display: { xs: 'none', xl: 'block' },
-                position: 'sticky',
-                top: 22,
-                alignSelf: 'start',
-                maxHeight: 'calc(100vh - 44px)',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                pr: 0.5,
-                '&::-webkit-scrollbar': { width: 4 },
-                '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 4 },
-              }}
-            >
-              <InsightColumn
-                resources={resources}
-                favoriteResources={favoriteResources}
-                recentResources={recentResources}
-                onOpenDetail={openDetail}
+          {activePage === 'Analytics' ? (
+            // Analytics View
+            <Analytics resources={resources} />
+          ) : (
+            // Dashboard View
+            <>
+              <HeroSection
+                selectedResource={selectedResource}
+                onOpenAssistant={() => setAssistantOpen(true)}
+                onOpenDetail={() => setDetailOpen(true)}
               />
-            </Box>
-          </Box>
+
+              <StatsGrid {...stats} />
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', xl: 'minmax(0,1fr) 340px' },
+                  gap: 2,
+                  minWidth: 0,
+                }}
+              >
+                <ResourceLibrary
+                  activePage={activePage}
+                  filteredResources={filteredResources}
+                  search={search}
+                  onSearchChange={setSearch}
+                  selectedType={selectedType}
+                  onTypeChange={setSelectedType}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
+                  sortMode={sortMode}
+                  onSortChange={setSortMode}
+                  onToggleFavorite={toggleFavorite}
+                  onOpenDetail={openDetail}
+                  onResetFilters={resetFilters}
+                  categoryOptions={categoryOptions}
+                  selectedResourceIds={selectedResourceIds}
+                  onToggleSelectResource={toggleSelectResource}
+                  onClearSelection={clearSelection}
+                  onDeleteSelected={deleteSelected}
+                  deletingSelected={deletingSelected}
+                  deletableSelectedCount={deletableSelectedCount}
+                />
+
+                <Box
+                  sx={{
+                    display: { xs: 'none', xl: 'block' },
+                    position: 'sticky',
+                    top: 22,
+                    alignSelf: 'start',
+                    maxHeight: 'calc(100vh - 44px)',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    pr: 0.5,
+                    '&::-webkit-scrollbar': { width: 4 },
+                    '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 4 },
+                  }}
+                >
+                  <InsightColumn
+                    resources={resources}
+                    favoriteResources={favoriteResources}
+                    recentResources={recentResources}
+                    onOpenDetail={openDetail}
+                  />
+                </Box>
+              </Box>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -478,12 +495,35 @@ const App: React.FC = () => {
         ownerId={user.id}
       />
 
+      {/* Analytics Modal */}
+      <Dialog
+        open={analyticsOpen}
+        onClose={() => setAnalyticsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '22px',
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.75)',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': { width: 6 },
+            '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 3 },
+          },
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Analytics resources={resources} />
+        </Box>
+      </Dialog>
+
       {/* AI Assistant */}
       <AIAssistant
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
         messages={messages}
-        quickPrompts={quickPrompts}
         onSendPrompt={sendPrompt}
         loading={aiLoading}
       />

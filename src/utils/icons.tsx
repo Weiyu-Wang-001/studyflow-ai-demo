@@ -7,7 +7,7 @@ import {
   Link as LinkIcon,
   Description as NotesIcon,
   Videocam as VideoIcon,
-  Folder as FolderIcon,
+  InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import { ResourceType } from '../types';
 
@@ -20,9 +20,9 @@ export function getIconForType(type: ResourceType): React.ReactElement {
     Link: <LinkIcon {...props} />,
     Notes: <NotesIcon {...props} />,
     Video: <VideoIcon {...props} />,
-    File: <FolderIcon {...props} />,
+    File: <FileIcon {...props} />,
   };
-  return map[type] || <FolderIcon {...props} />;
+  return map[type] || <FileIcon {...props} />;
 }
 
 export function getEmojiForType(type: ResourceType): string {
@@ -33,9 +33,9 @@ export function getEmojiForType(type: ResourceType): string {
     Link: '🔗',
     Notes: '📝',
     Video: '🎬',
-    File: '📁',
+    File: '�',
   };
-  return map[type] || '📁';
+  return map[type] || '📄';
 }
 
 export const toneColors: Record<string, string> = {

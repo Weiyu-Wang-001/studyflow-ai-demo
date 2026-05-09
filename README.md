@@ -27,7 +27,7 @@
 | HTTP Client | Axios | Frontend-backend communication |
 | Build Tool | Vite 5 | Fast HMR development |
 | Backend | Node.js + Express 5 | API proxy + auth service |
-| AI Integration | Configurable provider (OpenAI default, optional Claude or Tongyi) | Server-side proxy, key not exposed |
+| AI Integration | Configurable provider (Tongyi default, optional Claude or OpenAI) | Server-side proxy, key not exposed |
 | User Storage | JSON file | Lightweight user data persistence |
 
 ---
@@ -94,16 +94,16 @@ cp .env.example .env
 ```
 
 Supported providers:
-- `openai` (default)
+- `tongyi` (default)
 - `claude`
-- `tongyi`
+- `openai`
 
 Example env entries:
 
 ```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+AI_PROVIDER=tongyi
+TONGYI_API_KEY=sk-...
+TONGYI_MODEL=qwen-plus
 ```
 
 You can also provide provider-specific URLs and use `AI_API_KEY` as a generic fallback.

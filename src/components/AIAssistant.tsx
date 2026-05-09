@@ -18,11 +18,21 @@ import {
 } from '@mui/icons-material';
 import { ChatMessage } from '../types';
 
+// Remove markdown formatting (**, *, _, `, etc.)
+const sanitizeMarkdown = (text: string): string => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1') // **bold** -> bold
+    .replace(/\*(.+?)\*/g, '$1') // *italic* -> italic
+    .replace(/__(.+?)__/g, '$1') // __bold__ -> bold
+    .replace(/_(.+?)_/g, '$1') // _italic_ -> italic
+    .replace(/`(.+?)`/g, '$1') // `code` -> code
+    .replace(/#+\s/g, ''); // # heading -> heading
+};
+
 interface AIAssistantProps {
   open: boolean;
   onClose: () => void;
   messages: ChatMessage[];
-  quickPrompts: string[];
   onSendPrompt: (prompt: string) => void;
   loading: boolean;
 }
@@ -31,7 +41,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
   open,
   onClose,
   messages,
-  quickPrompts,
   onSendPrompt,
   loading,
 }) => {
@@ -138,18 +147,96 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
                 {msg.role === 'assistant' ? 'AI' : 'You'}
               </Typography>
             </Box>
-            <Typography
-              component="div"
-              variant="body2"
-              sx={{
-                color: '#475569',
-                lineHeight: 1.8,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}
-            >
-              {msg.text}
-            </Typography>
+            
+            {/* Summary section */}
+            {msg.summary && (
+              <Box sx={{ mb: msg.suggestions?.length ? 1.5 : 0 }}>
+                <Typography
+                  component="div"
+                  variant="body2"
+                  sx={{
+                    color: '#475569',
+                    lineHeight: 1.8,
+                    wordBreak: 'break-word',
+                    fontWeight: 500,
+                  }}
+                >
+                  {sanitizeMarkdown(msg.summary || '')}
+                </Typography>
+              </Box>
+            )}
+            
+            {/* Suggestions section */}
+            {msg.suggestions && msg.suggestions.length > 0 && (
+              <Box sx={{ mt: msg.summary ? 1.5 : 0, pt: msg.summary ? 1.5 : 0, borderTop: msg.summary ? '1px solid rgba(148,163,184,0.15)' : 'none' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    color: '#64748b',
+                    fontWeight: 700,
+                    fontSize: 10,
+                    mb: 0.8,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  💡 Suggestions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
+                  {msg.suggestions.map((suggestion, sidx) => (
+                    <Box
+                      key={sidx}
+                      sx={{
+                        display: 'flex',
+                        gap: 0.8,
+                        p: 0.8,
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(41,93,244,0.08) 0%, rgba(41,93,244,0.04) 100%)',
+                        border: '1px solid rgba(41,93,244,0.12)',
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          minWidth: 18,
+                          fontWeight: 600,
+                          color: '#295df4',
+                          fontSize: 12,
+                        }}
+                      >
+                        {sidx + 1}.
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: '#475569',
+                          lineHeight: 1.6,
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {sanitizeMarkdown(suggestion)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            {/* Fallback for plain text messages */}
+            {!msg.summary && (
+              <Typography
+                component="div"
+                variant="body2"
+                sx={{
+                  color: '#475569',
+                  lineHeight: 1.8,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {sanitizeMarkdown(msg.text)}
+              </Typography>
+            )}
           </Paper>
         ))}
         {loading && (
@@ -158,29 +245,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
           </Box>
         )}
         <div ref={messagesEndRef} />
-      </Box>
-
-      {/* Quick Prompts */}
-      <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', mt: 2, mb: 1.5 }}>
-        {quickPrompts.map((prompt) => (
-          <Chip
-            key={prompt}
-            label={prompt}
-            clickable
-            size="small"
-            icon={<AiIcon sx={{ fontSize: '14px !important' }} />}
-            onClick={() => onSendPrompt(prompt)}
-            disabled={loading}
-            sx={{
-              borderRadius: '14px',
-              fontSize: 12,
-              background: 'rgba(255,255,255,0.88)',
-              border: '1px solid rgba(148,163,184,0.22)',
-              '&:hover': { transform: 'translateY(-1px)', background: '#f1f5f9' },
-              transition: 'all 0.18s ease',
-            }}
-          />
-        ))}
       </Box>
 
       {/* Input */}

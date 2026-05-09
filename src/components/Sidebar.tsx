@@ -17,6 +17,7 @@ import {
   AutoAwesome as AiIcon,
   LogoutRounded as LogoutIcon,
   AccountCircleRounded as AccountIcon,
+  AnalyticsOutlined as AnalyticsIcon,
 } from '@mui/icons-material';
 import { PageName } from '../types';
 
@@ -34,6 +35,7 @@ const navItems: { label: PageName; icon: React.ReactElement }[] = [
   { label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
   { label: 'Library', icon: <LibraryIcon fontSize="small" /> },
   { label: 'Favorites', icon: <FavoriteIcon fontSize="small" /> },
+  { label: 'Analytics', icon: <AnalyticsIcon fontSize="small" /> },
   { label: 'Workspace', icon: <WorkspaceIcon fontSize="small" /> },
 ];
 

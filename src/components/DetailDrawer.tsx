@@ -31,12 +31,17 @@ function getViewUrl(resource: Resource): string | null {
   return null;
 }
 
-function getPreviewKind(resource: Resource, viewUrl: string | null): 'pdf' | 'image' | 'video' | 'link' | 'none' {
+function getPreviewKind(resource: Resource, viewUrl: string | null): 'pdf' | 'image' | 'video' | 'link' | 'document' | 'none' {
   if (!viewUrl) return 'none';
   if (resource.type === 'PDF') return 'pdf';
   if (resource.type === 'Image') return 'image';
   if (resource.type === 'Video') return 'video';
   if (resource.type === 'Link') return 'link';
+  if (resource.type === 'File') {
+    // Check if it's a document/office file based on filePath
+    const filePath = String(resource.filePath || '').toLowerCase();
+    if (/\.(docx?|xlsx?|pptx?|odt|rtf)$/.test(filePath)) return 'document';
+  }
   return 'none';
 }
 
@@ -290,6 +295,31 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
                   scheduleSave(Math.max(0, Math.min(100, Math.round(next))));
                 }}
                 sx={{ display: 'block', width: '100%', maxHeight: 420, background: '#0b1220' }}
+              />
+            </Box>
+          )}
+
+          {previewKind === 'document' && (
+            <Box
+              sx={{
+                mt: 1,
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid rgba(148,163,184,0.25)',
+                background: '#fff',
+                height: 380,
+              }}
+            >
+              <Box
+                component="iframe"
+                title={`Document: ${resource.title}`}
+                src={`https://docs.google.com/gvjs?id=${encodeURIComponent(viewUrl!)}&embedded=true`}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  border: 0,
+                  borderRadius: '14px',
+                }}
               />
             </Box>
           )}

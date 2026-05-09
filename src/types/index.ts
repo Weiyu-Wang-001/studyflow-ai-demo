@@ -20,7 +20,9 @@ export interface Resource {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
+  summary?: string;
+  suggestions?: string[];
 }
 
-export type PageName = 'Dashboard' | 'Library' | 'Favorites' | 'Workspace';
+export type PageName = 'Dashboard' | 'Library' | 'Favorites' | 'Workspace' | 'Analytics';
 export type SortMode = 'Recent' | 'Favorites' | 'A-Z' | 'Progress';

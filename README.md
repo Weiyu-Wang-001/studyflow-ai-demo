@@ -27,7 +27,7 @@
 | HTTP Client | Axios | Frontend-backend communication |
 | Build Tool | Vite 5 | Fast HMR development |
 | Backend | Node.js + Express 5 | API proxy + auth service |
-| AI Integration | Tongyi Qianwen (qwen-plus) | Server-side proxy, key not exposed |
+| AI Integration | Configurable provider (OpenAI default, optional Claude or Tongyi) | Server-side proxy, key not exposed |
 | User Storage | JSON file | Lightweight user data persistence |
 
 ---
@@ -84,6 +84,29 @@ studyflow-highscore-demo/
 ```bash
 npm install
 ```
+
+### 1.1. Configure AI provider
+
+Create a `.env` file in the project root or copy `.env.example`. The server loads environment variables using `dotenv`.
+
+```bash
+cp .env.example .env
+```
+
+Supported providers:
+- `openai` (default)
+- `claude`
+- `tongyi`
+
+Example env entries:
+
+```env
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+You can also provide provider-specific URLs and use `AI_API_KEY` as a generic fallback.
 
 ### 2. Start the Backend Server
 

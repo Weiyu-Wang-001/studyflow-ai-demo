@@ -1,31 +1,110 @@
 import axios from 'axios';
 
-const API_KEY = process.env.TONGYI_API_KEY || process.env.AI_API_KEY || null;
-const API_URL = process.env.TONGYI_API_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai').trim().toLowerCase();
 
-if (!API_KEY) {
-  console.warn('Warning: TONGYI_API_KEY not set. AI routes will fallback to local responses.');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.AI_API_KEY || null;
+const OPENAI_API_URL = process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || process.env.AI_API_KEY || null;
+const CLAUDE_API_URL = process.env.CLAUDE_API_URL || 'https://api.anthropic.com/v1/chat/completions';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3.5-sonic';
+
+const TONGYI_API_KEY = process.env.TONGYI_API_KEY || process.env.AI_API_KEY || null;
+const TONGYI_API_URL = process.env.TONGYI_API_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+const TONGYI_MODEL = process.env.TONGYI_MODEL || 'qwen-plus';
+
+const SYSTEM_PROMPT_CHAT =
+  'You are a helpful study assistant for a university student. Answer concisely and clearly in the context of academic learning resources.';
+const SYSTEM_PROMPT_SUMMARY =
+  'You are a study assistant. Provide a clear, structured summary of the given academic resource. Include key takeaways and study suggestions.';
+
+function getLlmConfig() {
+  switch (AI_PROVIDER) {
+    case 'claude':
+    case 'anthropic':
+      return {
+        apiKey: CLAUDE_API_KEY,
+        url: CLAUDE_API_URL,
+        model: CLAUDE_MODEL,
+        headers: {
+          'x-api-key': CLAUDE_API_KEY || undefined,
+          'Content-Type': 'application/json',
+        },
+        buildBody: (systemPrompt, userContent) => ({
+          model: CLAUDE_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+        }),
+      };
+    case 'tongyi':
+      return {
+        apiKey: TONGYI_API_KEY,
+        url: TONGYI_API_URL,
+        model: TONGYI_MODEL,
+        headers: {
+          Authorization: TONGYI_API_KEY ? `Bearer ${TONGYI_API_KEY}` : undefined,
+          'Content-Type': 'application/json',
+        },
+        buildBody: (systemPrompt, userContent) => ({
+          model: TONGYI_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+        }),
+      };
+    case 'openai':
+    default:
+      return {
+        apiKey: OPENAI_API_KEY,
+        url: OPENAI_API_URL,
+        model: OPENAI_MODEL,
+        headers: {
+          Authorization: OPENAI_API_KEY ? `Bearer ${OPENAI_API_KEY}` : undefined,
+          'Content-Type': 'application/json',
+        },
+        buildBody: (systemPrompt, userContent) => ({
+          model: OPENAI_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+        }),
+      };
+  }
 }
 
-async function callQwen(systemPrompt, userContent) {
+function parseResponseContent(response) {
+  if (!response?.data) return '';
+  return (
+    response.data?.choices?.[0]?.message?.content ||
+    response.data?.completion ||
+    response.data?.output_text ||
+    response.data?.choices?.[0]?.text ||
+    ''
+  );
+}
+
+async function callLlm(systemPrompt, userContent) {
+  const config = getLlmConfig();
+
+  if (!config.apiKey) {
+    console.warn(`Warning: no API key set for provider '${AI_PROVIDER}'. Falling back to local responses.`);
+  }
+
   const response = await axios.post(
-    API_URL,
+    config.url,
+    config.buildBody(systemPrompt, userContent),
     {
-      model: 'qwen-plus',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-    },
-    {
-      headers: {
-        Authorization: API_KEY ? `Bearer ${API_KEY}` : undefined,
-        'Content-Type': 'application/json',
-      },
+      headers: config.headers,
       timeout: 30000,
     }
   );
-  return response.data.choices[0].message.content;
+
+  return parseResponseContent(response);
 }
 
 // AI Chat endpoint
@@ -33,15 +112,12 @@ export async function aiChat(req, res) {
   try {
     const { prompt, resource } = req.body;
 
-    let systemPrompt =
-      'You are a helpful study assistant for a university student. Answer concisely and clearly in the context of academic learning resources.';
-
     let userContent = prompt;
     if (resource) {
       userContent = `Context - Resource: "${resource.title}" (${resource.type}, Course: ${resource.course})\nContent: ${resource.content}\n\nUser question: ${prompt}`;
     }
 
-    const reply = await callQwen(systemPrompt, userContent);
+    const reply = await callLlm(SYSTEM_PROMPT_CHAT, userContent);
     res.json({ reply });
   } catch (error) {
     console.error('AI Chat error:', error.message);
@@ -54,12 +130,9 @@ export async function aiSummarize(req, res) {
   try {
     const { title, content, type, course, tags } = req.body;
 
-    const systemPrompt =
-      'You are a study assistant. Provide a clear, structured summary of the given academic resource. Include key takeaways and study suggestions.';
-
     const userContent = `Please summarize this resource:\nTitle: ${title}\nType: ${type}\nCourse: ${course}\nTags: ${(tags || []).join(', ')}\nContent: ${content}`;
 
-    const summary = await callQwen(systemPrompt, userContent);
+    const summary = await callLlm(SYSTEM_PROMPT_SUMMARY, userContent);
     res.json({ summary });
   } catch (error) {
     console.error('AI Summarize error:', error.message);
